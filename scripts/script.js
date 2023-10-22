@@ -1,4 +1,33 @@
 // (function () {
+/**
+ * pubSub snippet source:
+ * https://gist.github.com/learncodeacademy/777349747d8382bfb722#file-pubsub-js
+ */
+const pubSub = {
+  events: {},
+  on: function (eventName, fn) {
+    this.events[eventName] = this.events[eventName] || [];
+    this.events[eventName].push(fn);
+  },
+  off: function (eventName, fn) {
+    if (this.events[eventName]) {
+      for (var i = 0; i < this.events[eventName].length; i++) {
+        if (this.events[eventName][i] === fn) {
+          this.events[eventName].splice(i, 1);
+          break;
+        }
+      }
+    }
+  },
+  emit: function (eventName, data) {
+    if (this.events[eventName]) {
+      this.events[eventName].forEach(function (fn) {
+        fn(data);
+      });
+    }
+  },
+};
+
 function gameBoard() {
   const grid = [];
   const values = {
@@ -169,69 +198,72 @@ function gameController() {
   const player1 = createPlayer("o");
   const player2 = createPlayer("x");
   let turn = 1;
+  let currPlayer = player1;
+  let gameOver = false;
 
   function _showBoard() {
     console.table(board.getDisplayGrid());
   }
 
-  function _getCurrPlayer() {
-    if (turn % 2 === 0) {
-      return player2;
-    } else {
-      return player1;
-    }
-  }
-
   function _showPrompt() {
-    console.log(`${_getCurrPlayer().getSymbol()}'s turn:`);
+    return `${currPlayer.getSymbol()}'s turn`;
   }
 
-  function _destroyGame() {
-    board.reset();
-    turn = 1;
+  function _nextTurn() {
+    turn++;
+    currPlayer = currPlayer === player1 ? player2 : player1;
   }
 
   function _checkGameOver() {
     if (turn < 4) {
-      turn++;
+      _nextTurn();
       _showBoard();
-      _showPrompt();
-      return;
+      return _showPrompt();
     }
 
     const threeInRow = board.threeInRow();
     const allFilled = board.getEmptyCellCount === 0;
 
     if (!(threeInRow || allFilled)) {
-      turn++;
+      _nextTurn();
       _showBoard();
-      _showPrompt();
-      return;
+      return _showPrompt();
     }
 
     _showBoard();
+    gameOver = true;
     if (threeInRow) {
-      console.log(`${_getCurrPlayer().getSymbol()} WINS`);
+      return `${currPlayer.getSymbol()} WINS`;
     } else if (allFilled) {
-      console.log("IT'S A DRAW");
+      return "IT'S A DRAW";
     }
-    _destroyGame();
+    // _destroyGame();
+  }
+
+  function getCurrPlayer() {
+    return currPlayer;
   }
 
   function startGame() {
     board.reset();
+    turn = 1;
+    currPlayer = player1;
+    gameOver = false;
     _showBoard();
-    _showPrompt();
+
+    return _showPrompt();
   }
 
   function playTurn(x, y) {
-    const currPlr = _getCurrPlayer();
-    // const [x, y] = currPlr.getNextMove();
-    const symbol = currPlr.getSymbol();
+    const symbol = currPlayer.getSymbol();
     const placed = board.place(x, y, symbol);
 
     if (placed) {
-      _checkGameOver();
+      const msg = _checkGameOver();
+      if (gameOver) {
+        pubSub.emit("gameOver");
+      }
+      return msg;
     } else {
       console.log(`Invalid move on ${x}, ${y}. Try again:`);
     }
@@ -240,9 +272,72 @@ function gameController() {
   return {
     start: startGame,
     playTurn,
+    getCurrPlayer,
   };
 }
 
-const game = gameController();
-game.start();
+function displayController() {
+  const game = gameController();
+
+  pubSub.on("gameOver", _removeListeners);
+
+  function _showStatusMessage(msg) {
+    const message = document.querySelector(".status .message");
+    message.textContent = msg;
+  }
+
+  /**
+   * Send coordinates of cell clicked to game
+   * @param {MouseEvent} event
+   */
+  function _handleCellClick(event) {
+    const cell = event.target;
+    const x = cell.dataset.x;
+    const y = cell.dataset.y;
+    const symbol = game.getCurrPlayer().getSymbol();
+    const msg = game.playTurn(x, y);
+
+    cell.textContent = symbol;
+    cell.disabled = true;
+
+    _showStatusMessage(msg);
+  }
+
+  function _removeListeners() {
+    const cells = document.querySelectorAll(".cell");
+    cells.forEach((cell) => {
+      cell.removeEventListener("click", _handleCellClick);
+    });
+  }
+
+  function _build() {
+    const board = document.querySelector(".board");
+
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 3; j++) {
+        const cellBtn = document.createElement("button");
+        cellBtn.type = "button";
+        cellBtn.classList.add("cell");
+        cellBtn.dataset.x = i;
+        cellBtn.dataset.y = j;
+        cellBtn.addEventListener("click", _handleCellClick);
+        board.appendChild(cellBtn);
+      }
+    }
+  }
+  function init() {
+    _build();
+    game.start();
+  }
+
+  function destroy() {}
+
+  return {
+    init,
+  };
+}
+
+const display = displayController();
+display.init();
+
 // })();
