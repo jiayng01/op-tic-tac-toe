@@ -28,7 +28,74 @@ const pubSub = {
   },
 };
 
-function gameBoard() {
+/**
+ * Factory function that mimics some Set functions for quick
+ * manipulation of array
+ * @param {Number} len - length of inner array
+ */
+function createArrayOfArrays(len) {
+  const contents = [];
+
+  function _findIndex(item) {
+    const idx = contents.findIndex((arr) => {
+      let matches = 0;
+      for (let i = 0; i < len; i++) {
+        if (arr[i] === item[i]) matches++;
+      }
+      return matches === len;
+    });
+    return idx;
+  }
+
+  function getContents() {
+    return contents;
+  }
+
+  function add(item) {
+    if (_findIndex(item) < 0) contents.push(item);
+    contents.sort();
+  }
+
+  function remove(item) {
+    const idx = _findIndex(item);
+    if (idx < 0) return false;
+
+    contents.splice(idx, 1);
+    return true;
+  }
+
+  function clear() {
+    for (let i = 0; i < contents.length; i++) {
+      contents.pop();
+    }
+  }
+
+  return {
+    getContents,
+    add,
+    remove,
+    clear,
+  };
+}
+
+/**
+ * @typedef {Object} GameBoard
+ * @property {Function} getGrid,
+ * @property {Function} getDisplayGrid,
+ * @property {Function} getEmptyCells,
+ * @property {Function} getCellSymbol,
+ * @property {Function} build,
+ * @property {Function} destroy,
+ * @property {Function} place,
+ * @property {Function} unPlace,
+ * @property {Function} threeInRow,
+ */
+
+/**
+ * Module that manages the game board
+ * @returns {GameBoard}
+ */
+function gameBoard(rows, cols) {
   const grid = [];
   const values = {
     o: 1,
@@ -40,14 +107,13 @@ function gameBoard() {
     y: 0,
     symbol: "",
   };
-  let emptyCellCount = 9;
+
+  const emptyCells = createArrayOfArrays(2);
 
   function _isCellValid(x, y) {
-    return x >= 0 && x < 3 && y >= 0 && y < 3 && getCell(x, y) === values["-"];
-  }
-
-  function _setCell(x, y, value) {
-    grid[x][y] = value;
+    return (
+      x >= 0 && x < rows && y >= 0 && y < cols && getCellSymbol(x, y) === "-"
+    );
   }
 
   function _getKeyOf(value) {
@@ -65,7 +131,7 @@ function gameBoard() {
 
   function _sumAcross(x) {
     let sum = 0;
-    for (let y = 0; y < 3; y++) {
+    for (let y = 0; y < cols; y++) {
       sum += grid[x][y];
     }
     return sum;
@@ -73,7 +139,7 @@ function gameBoard() {
 
   function _sumDown(y) {
     let sum = 0;
-    for (let x = 0; x < 3; x++) {
+    for (let x = 0; x < rows; x++) {
       sum += grid[x][y];
     }
     return sum;
@@ -93,14 +159,42 @@ function gameBoard() {
     lastMove.symbol = symbol;
   }
 
-  function getCell(x, y) {
-    return grid[x][y];
+  /**
+   * Set cell content as its corresponding numeric value, given a symbol
+   * @param {Number} x
+   * @param {Number} y
+   * @param {String} symbol
+   */
+  function _setCell(x, y, symbol) {
+    grid[x][y] = values[symbol];
   }
 
+  /**
+   * Get cell content in terms of symbols
+   * @param {number} x
+   * @param {number} y
+   * @returns {string} symbol
+   */
+  function getCellSymbol(x, y) {
+    return _getKeyOf(grid[x][y]);
+  }
+
+  /**
+   * Get numeric grid
+   * @returns {Array[]} grid
+   */
   function getGrid() {
     return grid;
   }
 
+  function getEmptyCells() {
+    return emptyCells.getContents();
+  }
+
+  /**
+   * Get symbolic grid
+   * @returns displayGrid
+   */
   function getDisplayGrid() {
     const displayGrid = grid.reduce((accumulator, row) => {
       const mappedRow = row.map((cell) => {
@@ -112,39 +206,41 @@ function gameBoard() {
     return displayGrid;
   }
 
-  function getEmptyCellCount() {
-    return emptyCellCount;
-  }
-
   function build() {
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < rows; i++) {
       grid[i] = [];
-      for (let j = 0; j < 3; j++) {
-        _setCell(i, j, values["-"]);
+      for (let j = 0; j < cols; j++) {
+        _setCell(i, j, "-");
+        emptyCells.add([i, j]);
       }
     }
   }
 
-  function reset() {
+  function destroy() {
     if (grid.length > 0) {
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < rows; i++) {
         grid.pop();
       }
     }
-    build();
-    emptyCellCount = 9;
+    // build();
+    emptyCells.clear();
     _updateLastMove();
   }
 
   function place(x, y, symbol) {
     if (_isCellValid(x, y)) {
-      _setCell(x, y, values[symbol]);
+      _setCell(x, y, symbol);
       _updateLastMove(x, y, symbol);
-      emptyCellCount--;
+      emptyCells.remove([x, y]);
       return true;
     } else {
       return false;
     }
+  }
+
+  function unPlace(x, y) {
+    _setCell(x, y, "-");
+    emptyCells.add([x, y]);
   }
 
   function threeInRow(
@@ -164,10 +260,12 @@ function gameBoard() {
   return {
     getGrid,
     getDisplayGrid,
-    getEmptyCellCount,
+    getEmptyCells,
+    getCellSymbol,
     build,
-    reset,
+    destroy,
     place,
+    unPlace,
     threeInRow,
   };
 }
@@ -176,96 +274,308 @@ function gameBoard() {
  * Factory function to create Player objects
  * @param {string} symbol - 'o' or 'x'
  */
-function createPlayer(symbol) {
+function createPlayer(name, type = "Human", symbol, activeState) {
+  let isActive = activeState;
+
+  function getName() {
+    return name;
+  }
+
+  function getType() {
+    return type;
+  }
+
   function getSymbol() {
     return symbol;
   }
 
-  function getNextMove() {
-    const coords = prompt(`${symbol}'s turn`);
-    if (coords) return coords.split(" ");
-    else return [-1, -1];
+  function toggleActiveState() {
+    isActive = isActive ? false : true;
+  }
+
+  function getActiveState() {
+    return isActive;
   }
 
   return {
+    getName,
+    getType,
     getSymbol,
-    getNextMove,
+    toggleActiveState,
+    getActiveState,
   };
 }
 
-function gameController() {
-  const board = gameBoard();
-  const player1 = createPlayer("o");
-  const player2 = createPlayer("x");
+/**
+ * Factory function that returns a BotPlayer
+ * @param {string} symbol
+ * @param {GameBoard} board
+ * @param {Boolean} activeState
+ */
+function createBotPlayer(name, symbol, board, activeState) {
+  const playerParent = createPlayer(name, "Bot", symbol, activeState);
+
+  const mySymbol = playerParent.getSymbol();
+  const oppSymbol = mySymbol === "o" ? "x" : "o";
+  let currBoard = board;
+
+  function _getNextMoves() {
+    return currBoard.getEmptyCells();
+  }
+
+  /**
+   * Calculates the value of each line in a certain terminating state
+   * using the heuristics function:
+   * +100, +10, +1 for 3-, 2-, 1-in-a-line for computer.
+   * -100, -10, -1 for 3-, 2-, 1-in-a-line for opponent.
+   * 0 otherwise
+   * @param  {...Array} args
+   */
+  function _evaluateLine(...args) {
+    let myCount = 0;
+    let oppCount = 0;
+    for (let [x, y] of args) {
+      const cellSymbol = currBoard.getCellSymbol(x, y);
+
+      if (cellSymbol === mySymbol) {
+        myCount++;
+      } else if (cellSymbol === oppSymbol) {
+        oppCount++;
+      }
+    }
+
+    if (myCount + oppCount === 0 || (myCount > 0 && oppCount > 0)) return 0; // empty or both players in line
+
+    // only bot in line
+    switch (myCount) {
+      case 1:
+        return 1;
+      case 2:
+        return 10;
+      case 3:
+        return 100;
+    }
+
+    // only opponent in line
+    switch (oppCount) {
+      case 1:
+        return -1;
+      case 2:
+        return -10;
+      case 3:
+        return -100;
+    }
+
+    return 0;
+  }
+
+  function _evaluate() {
+    let score = 0;
+
+    // cols
+    score += _evaluateLine([0, 0], [0, 1], [0, 2]);
+    score += _evaluateLine([1, 0], [1, 1], [1, 2]);
+    score += _evaluateLine([2, 0], [2, 1], [2, 2]);
+
+    // rows
+    score += _evaluateLine([0, 0], [1, 0], [2, 0]);
+    score += _evaluateLine([0, 1], [1, 1], [2, 1]);
+    score += _evaluateLine([0, 2], [1, 2], [2, 2]);
+
+    // diagonals
+    score += _evaluateLine([0, 0], [1, 1], [2, 2]);
+    score += _evaluateLine([0, 2], [1, 1], [2, 0]);
+
+    return score;
+  }
+
+  /**
+   *
+   * @param {number} height
+   * @param {string} maximizing
+   * @returns
+   */
+  function minmax(height, maximizing) {
+    const possibleMoves = _getNextMoves();
+    let bestMove = [-1, -1];
+
+    if (height === 0 || possibleMoves.length === 0) {
+      return { bestMove, bestScore: _evaluate() };
+    }
+
+    let bestScore =
+      maximizing === mySymbol
+        ? Number.NEGATIVE_INFINITY
+        : Number.POSITIVE_INFINITY;
+
+    for (let [x, y] of possibleMoves) {
+      currBoard.place(x, y, maximizing);
+
+      if (maximizing === mySymbol) {
+        const score = minmax(height - 1, oppSymbol).bestScore;
+        if (score > bestScore) {
+          bestScore = score;
+          bestMove = [x, y];
+        }
+      } else {
+        const score = minmax(height - 1, mySymbol).bestScore;
+        if (score < bestScore) {
+          bestScore = score;
+          bestMove = [x, y];
+        }
+      }
+      currBoard.unPlace(x, y, "-");
+    }
+
+    return { bestMove, bestScore };
+  }
+
+  function getMove() {
+    return minmax(2, mySymbol).bestMove;
+  }
+
+  return Object.assign({}, playerParent, { getMove });
+}
+
+/**
+ * @typedef playerObj
+ * @property {string} type
+ * @property {string} symbol
+ */
+
+/**
+ * Module that manages flow of the game
+ * @param {playerObj} playerObj1
+ * @param {playerObj} playerObj2
+ * @returns
+ */
+function gameController(playerObj1, playerObj2) {
+  const board = gameBoard(3, 3);
+  const gameOver = {
+    state: false,
+    winner: "none",
+  };
+
+  let player1 = {};
+  let player2 = {};
   let turn = 1;
-  let currPlayer = player1;
-  let gameOver = false;
+
+  if (playerObj1.type === "Bot") {
+    player1 = createBotPlayer("Player 1", playerObj1.symbol, board, true);
+  } else {
+    player1 = createPlayer(
+      "Player 1",
+      playerObj1.type,
+      playerObj1.symbol,
+      true
+    );
+  }
+
+  if (playerObj2.type === "Bot") {
+    player2 = createBotPlayer("Player 2", playerObj2.symbol, board, false);
+  } else {
+    player2 = createPlayer(
+      "Player 2",
+      playerObj2.type,
+      playerObj2.symbol,
+      false
+    );
+  }
 
   function _showBoard() {
     console.table(board.getDisplayGrid());
   }
 
-  function _showPrompt() {
-    return `${currPlayer.getSymbol()}'s turn`;
+  function _getPrompt() {
+    return `${getCurrPlayer().getSymbol()}'s turn`;
+  }
+
+  function _switchCurrPlayer() {
+    player1.toggleActiveState();
+    player2.toggleActiveState();
   }
 
   function _nextTurn() {
     turn++;
-    currPlayer = currPlayer === player1 ? player2 : player1;
+    _switchCurrPlayer();
+    pubSub.emit("showMessage", _getPrompt());
+    _playing();
   }
 
   function _checkGameOver() {
-    if (turn < 4) {
-      _nextTurn();
-      _showBoard();
-      return _showPrompt();
-    }
-
     const threeInRow = board.threeInRow();
-    const allFilled = board.getEmptyCellCount === 0;
+    const allFilled = board.getEmptyCells().length === 0;
 
     if (!(threeInRow || allFilled)) {
-      _nextTurn();
-      _showBoard();
-      return _showPrompt();
+      return;
     }
 
-    _showBoard();
-    gameOver = true;
+    gameOver.state = true;
     if (threeInRow) {
-      return `${currPlayer.getSymbol()} WINS`;
+      gameOver.winner = getCurrPlayer();
     } else if (allFilled) {
-      return "IT'S A DRAW";
+      gameOver.winner = "none";
     }
-    // _destroyGame();
+  }
+
+  function _playing() {
+    if (!gameOver.state) {
+      const currPlayer = getCurrPlayer();
+      const type = currPlayer.getType();
+      if (type === "Human") {
+        pubSub.emit("humansTurn", true);
+      } else {
+        pubSub.emit("humansTurn", false);
+        const [x, y] = currPlayer.getMove();
+        playTurn(x, y);
+      }
+    } else {
+      pubSub.emit("gameOver");
+      _endGame();
+    }
+  }
+
+  function _endGame() {
+    board.destroy();
+    turn = 1;
+    player1 = {};
+    player2 = {};
   }
 
   function getCurrPlayer() {
-    return currPlayer;
+    if (player1.getActiveState()) {
+      return player1;
+    } else {
+      return player2;
+    }
+  }
+
+  function getWinner() {
+    return gameOver.winner;
   }
 
   function startGame() {
-    board.reset();
-    turn = 1;
-    currPlayer = player1;
-    gameOver = false;
-    _showBoard();
-
-    return _showPrompt();
+    board.build();
+    gameOver.state = false;
+    gameOver.winner = "none";
+    _playing();
   }
 
+  /**
+   * Add's player's move to the board and checks for winning condition
+   * @param {Number} x
+   * @param {Number} y
+   */
   function playTurn(x, y) {
-    const symbol = currPlayer.getSymbol();
+    const symbol = getCurrPlayer().getSymbol();
     const placed = board.place(x, y, symbol);
 
     if (placed) {
-      const msg = _checkGameOver();
-      if (gameOver) {
-        pubSub.emit("gameOver");
-      }
-      return msg;
+      pubSub.emit("markCell", [x, y, symbol]);
+      _checkGameOver();
+      _nextTurn();
     } else {
-      console.log(`Invalid move on ${x}, ${y}. Try again:`);
+      pubSub.emit("showMessage", `Invalid move on ${x}, ${y}. Try again.`);
     }
   }
 
@@ -273,17 +583,60 @@ function gameController() {
     start: startGame,
     playTurn,
     getCurrPlayer,
+    getWinner,
   };
 }
 
 function displayController() {
-  const game = gameController();
+  //TODO: disable buttons when bot's turn
+  const players = [
+    {
+      type: "Human",
+      symbol: "o",
+    },
+    {
+      type: "Bot",
+      symbol: "x",
+    },
+  ];
 
-  pubSub.on("gameOver", _removeListeners);
+  const playerTypeBtns = document.querySelectorAll(
+    "#start-screen button.player-type"
+  );
+  const playerSymbolBtns = document.querySelectorAll(
+    "#start-screen button.player-symbol"
+  );
+  const startBtn = document.querySelector("#start-screen button#start");
+
+  let game;
+  let isHumansTurn = false;
+
+  pubSub.on("gameOver", () => {
+    _endGameScreen();
+    _removeGameListeners();
+  });
+  pubSub.on("humansTurn", _setHumansTurn);
+  pubSub.on("showMessage", _showStatusMessage);
+  pubSub.on("markCell", _markCell);
+
+  /**
+   * Toggles isHumansTurn
+   * If true, the human can click on a cell to play their turn.
+   * If false, clicking on a cell does nothing.
+   * @param {Boolean} bool
+   */
+  function _setHumansTurn(bool) {
+    isHumansTurn = bool;
+  }
 
   function _showStatusMessage(msg) {
     const message = document.querySelector(".status .message");
     message.textContent = msg;
+  }
+
+  function _markCell([x, y, symbol]) {
+    const cell = document.querySelector(`[data-x="${x}"][data-y="${y}"]`);
+    cell.textContent = symbol;
   }
 
   /**
@@ -291,27 +644,129 @@ function displayController() {
    * @param {MouseEvent} event
    */
   function _handleCellClick(event) {
+    if (!isHumansTurn) return;
     const cell = event.target;
-    const x = cell.dataset.x;
-    const y = cell.dataset.y;
-    const symbol = game.getCurrPlayer().getSymbol();
-    const msg = game.playTurn(x, y);
-
-    cell.textContent = symbol;
-    cell.disabled = true;
-
-    _showStatusMessage(msg);
+    const x = parseInt(cell.dataset.x);
+    const y = parseInt(cell.dataset.y);
+    game.playTurn(x, y);
   }
 
-  function _removeListeners() {
+  /**
+   * Change type property of the player's object in the array of players
+   * and update the DOM element
+   * @param {HTMLButtonElement} element
+   * @param {Number} idx
+   * @param {String} symbol
+   */
+  function _changePlayerType(element, idx, type) {
+    players[idx].type = type;
+    element.value = type;
+    element.textContent = type;
+  }
+
+  /**
+   * Change symbol property of the player's object in the array of players
+   * and update the DOM element
+   * @param {HTMLButtonElement} element
+   * @param {Number} idx
+   * @param {String} symbol
+   */
+  function _changePlayerSymbol(element, idx, symbol) {
+    players[idx].symbol = symbol;
+    element.value = symbol;
+    element.textContent = symbol;
+  }
+
+  /**
+   * Toggle between 'Human' and 'Bot' as player's type
+   * @param {MouseEvent} event
+   */
+  function _handleTypeClick(event) {
+    const btn = event.target;
+    const idx = parseInt(btn.dataset.playerIdx);
+    const value = btn.value;
+    const type = value === "Human" ? "Bot" : "Human";
+
+    _changePlayerType(btn, idx, type);
+  }
+
+  /**
+   * Toggle between 'x' and 'o' as player's symbol and
+   * switches the other player's symbol accordingly
+   * @param {MouseEvent} event
+   */
+  function _handleSymbolClick(event) {
+    const btn = event.target;
+    const idx = parseInt(btn.dataset.playerIdx);
+    const otherIdx = idx === 0 ? 1 : 0;
+    const otherBtn = document.querySelector(
+      `#start-screen button.player-symbol[data-player-idx="${otherIdx}"]`
+    );
+
+    const symbol = btn.value;
+    const otherSymbol = otherBtn.value;
+
+    _changePlayerSymbol(btn, idx, otherSymbol);
+    _changePlayerSymbol(otherBtn, otherIdx, symbol);
+  }
+
+  function _handleStartClick() {
+    game = gameController(...players);
+    _initGameScreen();
+    _clearStartScreen();
+    game.start();
+  }
+
+  function _removeStartListeners() {
+    playerTypeBtns.forEach((btn) => {
+      btn.removeEventListener("click", _handleSymbolClick);
+    });
+    playerSymbolBtns.forEach((btn) => {
+      btn.removeEventListener("click", _handleSymbolClick);
+    });
+    startBtn.removeEventListener("click", _handleStartClick);
+  }
+
+  function _removeGameListeners() {
     const cells = document.querySelectorAll(".cell");
     cells.forEach((cell) => {
       cell.removeEventListener("click", _handleCellClick);
     });
   }
 
-  function _build() {
-    const board = document.querySelector(".board");
+  function _initTypeSelection() {
+    playerTypeBtns.forEach((btn) => {
+      btn.addEventListener("click", _handleTypeClick);
+    });
+  }
+
+  function _initSymbolSelection() {
+    playerSymbolBtns.forEach((btn) => {
+      btn.addEventListener("click", _handleSymbolClick);
+    });
+  }
+
+  function _buildPlayers() {
+    const playersDisp = document.querySelector("#game-screen .players");
+    for (let i = 0; i < 2; i++) {
+      const pill = document.createElement("div");
+      const playerType = document.createElement("div");
+      const playerSymbol = document.createElement("div");
+
+      pill.classList.add("pill");
+      playerType.classList.add("left", "player-type");
+      playerSymbol.classList.add("right", "player-symbol");
+
+      playerType.textContent = players[i].type;
+      playerSymbol.textContent = players[i].symbol;
+
+      pill.append(playerType, playerSymbol);
+      playersDisp.appendChild(pill);
+    }
+  }
+
+  function _buildBoard() {
+    const board = document.querySelector("#game-screen .board");
 
     for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 3; j++) {
@@ -325,15 +780,59 @@ function displayController() {
       }
     }
   }
-  function init() {
-    _build();
-    game.start();
+
+  function _initGameScreen() {
+    _buildPlayers();
+    _buildBoard();
   }
 
-  function destroy() {}
+  function _endGameScreen() {
+    const winner = game.getWinner();
+    if (winner === "none") {
+      _showStatusMessage("IT'S A DRAW");
+    } else {
+      _showStatusMessage(`${winner.getName()} WINS`);
+    }
+  }
+
+  function _clearGameScreen() {
+    // remove all child nodes in game screen
+  }
+
+  function initStartScreen() {
+    _initTypeSelection();
+    _initSymbolSelection();
+    startBtn.addEventListener("click", _handleStartClick);
+  }
+
+  function _clearStartScreen() {
+    const screen = document.getElementById("start-screen");
+    screen.classList.add("slide-out");
+    setTimeout(() => {
+      const playerTypes = document.querySelectorAll(
+        "#start-screen button.player-type"
+      );
+      const playerSymbols = document.querySelectorAll(
+        "#start-screen button.player-symbol"
+      );
+
+      for (let i = 0; i < playerTypes.length; i++) {
+        const newType = i === 0 ? "Human" : "Bot";
+        _changePlayerType(playerTypes[i], i, newType);
+      }
+
+      for (let j = 0; j < playerSymbols.length; j++) {
+        const newSymbol = j === 0 ? "o" : "x";
+        _changePlayerSymbol(playerSymbols[j], j, newSymbol);
+      }
+
+      screen.style.display = "none";
+    }, 1000);
+    _removeStartListeners();
+  }
 
   return {
-    init,
+    init: initStartScreen,
   };
 }
 

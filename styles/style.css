@@ -1,11 +1,61 @@
+:root {
+    --content-width: clamp(320px, 70vw, 1000px)
+}
+
 html {
     box-sizing: border-box;
+    font-family: Arial, Helvetica, sans-serif;
 }
 
 *,
 *::after,
 *::before {
     box-sizing: inherit;
+}
+
+button {
+    display: block;
+    padding: 0.5rem 1rem;
+    border: 0;
+}
+
+
+button:hover,
+button:focus {
+    background-color: hsl(0, 0%, 70%);
+}
+
+/* button:active {
+    background-color: hsl(33, 100%, 60%);
+} */
+
+.container {
+    padding-right: max(2rem, calc((50vw - var(--content-width)) / 2));
+    padding-left: max(2rem, calc((50vw - var(--content-width)) / 2));
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.grid-con {
+    display: grid;
+}
+
+.flex-con {
+    display: flex;
+}
+
+#start-screen {
+    width: 100vw;
+    height: 100vh;
+    background-color: white;
+    position: fixed;
+    top: 0;
+    left: 0;
+    transition: transform 1s ease;
+}
+
+#start-screen.slide-out {
+    transform: translate(0, -100%);
 }
 
 .board {
