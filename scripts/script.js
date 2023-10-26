@@ -390,7 +390,7 @@ function createBotPlayer(name, symbol, board, activeState) {
   }
 
   /**
-   *
+   * Plain minmax algorithm
    * @param {number} height
    * @param {string} maximizing
    * @returns
@@ -430,8 +430,58 @@ function createBotPlayer(name, symbol, board, activeState) {
     return { bestMove, bestScore };
   }
 
+  /**
+   * Minmax with alpha-beta pruning
+   * @param {number} height
+   * @param {string} maximizing
+   * @returns
+   */
+  function minmaxPruned(
+    height,
+    maximizing,
+    alpha = Number.NEGATIVE_INFINITY,
+    beta = Number.POSITIVE_INFINITY
+  ) {
+    const possibleMoves = _getNextMoves();
+    let bestMove = [-1, -1];
+
+    if (height === 0 || possibleMoves.length === 0) {
+      return { bestMove, bestScore: _evaluate() };
+    }
+
+    for (let [x, y] of possibleMoves) {
+      currBoard.place(x, y, maximizing);
+
+      if (maximizing === mySymbol) {
+        const score = minmaxPruned(
+          height - 1,
+          oppSymbol,
+          alpha,
+          beta
+        ).bestScore;
+        if (score > alpha) {
+          alpha = score;
+          bestMove = [x, y];
+        }
+      } else {
+        const score = minmaxPruned(height - 1, mySymbol, alpha, beta).bestScore;
+        if (score < beta) {
+          beta = score;
+          bestMove = [x, y];
+        }
+      }
+      currBoard.unPlace(x, y, "-");
+      // cut-off
+      if (alpha >= beta) break;
+    }
+
+    const bestScore = maximizing === mySymbol ? alpha : beta;
+
+    return { bestMove, bestScore };
+  }
+
   function getMove() {
-    return minmax(2, mySymbol).bestMove;
+    return minmaxPruned(2, mySymbol).bestMove;
   }
 
   return Object.assign({}, playerParent, { getMove });
