@@ -1,4 +1,10 @@
-# Classic Tic-Tac-Toe
+# Classic Tic Tac Toe
+
+A single-round 3-by-3 Tic Tac Toe game. A user may choose to play against a bot that uses the Minmax algorithm to decide its moves.
+
+Based on [The Odin Project > JavaScript Course > Tic Tac Toe Assignment](https://www.theodinproject.com/lessons/node-path-javascript-tic-tac-toe).
+
+Practiced creating factory functions for objects that require multiple instances (eg. Player) and modules for objects that don't (eg. Controllers, Game Board). The goal is to keep global variables to a minimum. All these are wrapped in an IIFE with 2 lines of initiation code. No object constructors were used.
 
 ## Algorithm
 
@@ -83,6 +89,11 @@ _Figure 3: Ideal next move = [2, 1]_
 _Figure 4: Next move taken = [0, 2]_
 
 To prioritize winning moves that occur earlier in the game, each line that has 3 of the same symbols will have a `weight` proportional to the number of possible moves remaining (i.e. inversely proportional to the number of turns that have been taken) attached — `weight * 100` for the bot and `weight * -100` for the opponent.
+
+## To-do
+
+- [ ] Allow players to enter their preferred player name
+- [ ] Add an option to play for multiple rounds
 
 ## References
 
