@@ -1,6 +1,8 @@
 # Classic Tic-Tac-Toe
 
-## Minmax Algorithm
+## Algorithm
+
+### Minmax
 
 The largest value the player can be sure to get when they know the actions of the other players.
 
@@ -9,11 +11,9 @@ The largest value the player can be sure to get when they know the actions of th
 - From the actions that give the maximum payoffs, take the action that gives the minimum payoff.
   - In the game tree: return the most negative value when it is opponent's turn
 
-In this project, the input depth is set at 2.
+#### Complexity
 
-### Complexity
-
-**Time Complexity: O(b<sup>m</sup>)**
+**_Time Complexity: O(b<sup>m</sup>)_**
 
 | depth | numNodes      | time             |
 | ----- | ------------- | ---------------- |
@@ -25,14 +25,38 @@ In this project, the input depth is set at 2.
 
 O(c + cb + cb<sup>2</sup> + ... + (cb)<sup>m</sup>) = O((cb)<sup>m</sup>) = O(b<sup>m</sup>)
 
-**Space Complexity: O(bm)**
+**_Space Complexity: O(bm)_**
 
 where
 
 - _b_ is the (average) number of legal moves at each point (branching factor)
 - _m_ is the maximum depth of the tree
 
-### Evaluation Function
+#### Evaluation Function
+
+The value of the board state is determined by:
+
+- +10 for the bot's win.
+- -10 for the opponent's win.
+- 0 otherwise.
+
+### Minmax with Alpha-Beta Pruning
+
+At the maximizing level, each node's `alpha` is updated by its children while `beta` — which holds the smallest value among its preceding siblings — is held constant for comparison. If the latest `alpha` value is greater than or equal to `beta`, do not continue searching the other children as the largest value out of all its children — what this maximizing node will return as its `bestScore` — will also exceed `beta`, meaning the parent node (a minimizing node) will never consider this current node.
+
+At the minimizing level, each node's `beta` is updated by its children while `alpha` — which holds the greatest value among its preceding siblings — is held constant for comparison. If the latest `beta` value is smaller than or equal to `alpha`, do not continue searching the other children as the smallest value out of all its children — what this minimizing node will return as its `bestScore` — will also be less than `alpha`, meaning the parent node (a maximizing node) will never consider this current node.
+
+#### Complexity
+
+**_Time Complexity: O(b<sup>m/2</sup>)_**
+in the best case
+
+> If the move ordering for the search is optimal (meaning the best moves are always searched first), the number of leaf node positions evaluated is about O(b×1×b×1×...×b) for odd depth and O(b×1×b×1×...×1) for even depth, or O(b<sup>d/2</sup>). In the latter case, where the ply of a search is even, the effective branching factor is reduced to its square root, or, equivalently, the search can go twice as deep with the same amount of computation. The explanation of b×1×b×1×... is that all the first player's moves must be studied to find the best one, but for each, only the second player's best move is needed to refute all but the first (and best) first player move—alpha–beta ensures no other second player moves need be considered.
+> [Source](https://en.wikipedia.org/wiki/Alpha%E2%80%93beta_pruning)
+
+![Tic-Tac-Toe with Alpha-Beta Pruning Tree (Best Case)](./images/Tic_Tac_Toe-Pruning-Tree.png)
+
+#### Evaluation Function
 
 The value of the board state is determined by:
 
@@ -44,21 +68,9 @@ The value of the board state is determined by:
 
 Lastly, sum the scores for each of the 8 lines (3 rows, 3 columns and 2 diagonals).
 
-## Minmax with Alpha-Beta Pruning
+### Mistakes
 
-At the maximizing level, each node's `alpha` is updated by its children while `beta` — which holds the smallest value among its preceding siblings — is held constant for comparison. If the latest `alpha` value is greater than or equal to `beta`, do not continue searching the other children as the largest value out of all its children — what this maximizing node will return as its `bestScore` — will also exceed `beta`, meaning the parent node (a minimizing node) will never consider this current node.
-
-At the minimizing level, each node's `beta` is updated by its children while `alpha` — which holds the greatest value among its preceding siblings — is held constant for comparison. If the latest `beta` value is smaller than or equal to `alpha`, do not continue searching the other children as the smallest value out of all its children — what this minimizing node will return as its `bestScore` — will also be less than `alpha`, meaning the parent node (a maximizing node) will never consider this current node.
-
-### Complexity
-
-**Time Complexity: O(b<sup>m/2</sup>)**
-in the best case
-
-> If the move ordering for the search is optimal (meaning the best moves are always searched first), the number of leaf node positions evaluated is about O(b×1×b×1×...×b) for odd depth and O(b×1×b×1×...×1) for even depth, or O(b<sup>d/2</sup>). In the latter case, where the ply of a search is even, the effective branching factor is reduced to its square root, or, equivalently, the search can go twice as deep with the same amount of computation. The explanation of b×1×b×1×... is that all the first player's moves must be studied to find the best one, but for each, only the second player's best move is needed to refute all but the first (and best) first player move—alpha–beta ensures no other second player moves need be considered.
-> [Source](https://en.wikipedia.org/wiki/Alpha%E2%80%93beta_pruning)
-
-![Tic-Tac-Toe with Alpha-Beta Pruning Tree (Best Case)](./images/Tic_Tac_Toe-Pruning-Tree.png)
+- Missing out an important terminating condition — when either player wins
 
 ## References
 
