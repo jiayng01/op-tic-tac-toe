@@ -54,7 +54,8 @@ in the best case
 > If the move ordering for the search is optimal (meaning the best moves are always searched first), the number of leaf node positions evaluated is about O(b×1×b×1×...×b) for odd depth and O(b×1×b×1×...×1) for even depth, or O(b<sup>d/2</sup>). In the latter case, where the ply of a search is even, the effective branching factor is reduced to its square root, or, equivalently, the search can go twice as deep with the same amount of computation. The explanation of b×1×b×1×... is that all the first player's moves must be studied to find the best one, but for each, only the second player's best move is needed to refute all but the first (and best) first player move—alpha–beta ensures no other second player moves need be considered.
 > [Source](https://en.wikipedia.org/wiki/Alpha%E2%80%93beta_pruning)
 
-![Tic-Tac-Toe with Alpha-Beta Pruning Tree (Best Case)](./images/Tic_Tac_Toe-Pruning-Tree.png)
+![Tic-Tac-Toe with Alpha-Beta Pruning Tree (Best Case)](./images/Tic_Tac_Toe-Pruning-Tree.png)  
+_Figure 1: Tracing a pruned minmax tree where the ordering is optimal_
 
 #### Evaluation Function
 
@@ -68,9 +69,20 @@ The value of the board state is determined by:
 
 Lastly, sum the scores for each of the 8 lines (3 rows, 3 columns and 2 diagonals).
 
-### Mistakes
+### Problems Faced
 
-- Missing out an important terminating condition — when either player wins
+Some winning moves at higher levels of the tree (moves that allow the bot win earlier) were ignored by the `if (currScore > bestScore)` condition as the heuristic returned the same scores.
+
+![Starting State](./images/starting-state.png)  
+_Figure 2: Initial State_
+
+![Ideal Move](./images/ideal-move.png)  
+_Figure 3: Ideal next move = [2, 1]_
+
+![Move Taken](./images/non-ideal-move.png)  
+_Figure 4: Next move taken = [0, 2]_
+
+To prioritize winning moves that occur earlier in the game, each line that has 3 of the same symbols will have a `weight` proportional to the number of possible moves remaining (i.e. inversely proportional to the number of turns that have been taken) attached — `weight * 100` for the bot and `weight * -100` for the opponent.
 
 ## References
 

@@ -373,7 +373,8 @@ function createBotPlayer(name, symbol, board, activeState) {
       case 2:
         return 10;
       case 3:
-        return 100;
+        return 100 * currBoard.getEmptyCells().length;
+      // return 100;
     }
 
     // only opponent in line
@@ -383,7 +384,8 @@ function createBotPlayer(name, symbol, board, activeState) {
       case 2:
         return -10;
       case 3:
-        return -100;
+        return -100 * currBoard.getEmptyCells().length;
+      // return -100;
     }
     return 0;
   }
@@ -493,19 +495,17 @@ function createBotPlayer(name, symbol, board, activeState) {
   }
 
   /**
-   * Minmax with alpha-beta pruning
-   * @param {number} height
-   * @param {string} maximizing
+   * Minmax with Alpha-Beta Pruning
+   * @param {Number} height
+   * @param {String} maximizing
+   * @param {Number} alpha
+   * @param {Number} beta
    * @returns
    */
-  function minmaxPruned(
-    height,
-    maximizing,
-    alpha = Number.NEGATIVE_INFINITY,
-    beta = Number.POSITIVE_INFINITY
-  ) {
+  function minmaxPruned(height, maximizing, alpha, beta) {
     const possibleMoves = _getNextMoves();
     let bestMove = [-1, -1];
+    let score;
 
     if (height === 0 || possibleMoves.length === 0) {
       return { bestMove, bestScore: _evaluate("continuous") };
@@ -515,18 +515,13 @@ function createBotPlayer(name, symbol, board, activeState) {
       currBoard.place(x, y, maximizing);
 
       if (maximizing === mySymbol) {
-        const score = minmaxPruned(
-          height - 1,
-          oppSymbol,
-          alpha,
-          beta
-        ).bestScore;
+        score = minmaxPruned(height - 1, oppSymbol, alpha, beta).bestScore;
         if (score > alpha) {
           alpha = score;
           bestMove = [x, y];
         }
       } else {
-        const score = minmaxPruned(height - 1, mySymbol, alpha, beta).bestScore;
+        score = minmaxPruned(height - 1, mySymbol, alpha, beta).bestScore;
         if (score < beta) {
           beta = score;
           bestMove = [x, y];
@@ -538,7 +533,6 @@ function createBotPlayer(name, symbol, board, activeState) {
     }
 
     const bestScore = maximizing === mySymbol ? alpha : beta;
-
     return { bestMove, bestScore };
   }
 
@@ -552,7 +546,12 @@ function createBotPlayer(name, symbol, board, activeState) {
 
     if (pruning) {
       start = performance.now();
-      result = minmaxPruned(9, mySymbol).bestMove;
+      result = minmaxPruned(
+        9,
+        mySymbol,
+        Number.NEGATIVE_INFINITY,
+        Number.POSITIVE_INFINITY
+      ).bestMove;
       end = performance.now();
       msg = "With Pruning";
     } else {
