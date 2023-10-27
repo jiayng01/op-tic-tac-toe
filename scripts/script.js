@@ -671,11 +671,10 @@
         }
       } else {
         pubSub.emit("gameOver");
-        _endGame();
       }
     }
 
-    function _endGame() {
+    function endGame() {
       board.destroy();
       turn = 0;
       player1 = {};
@@ -739,6 +738,7 @@
 
     return {
       start: startGame,
+      end: endGame,
       playTurn,
       getCurrPlayer,
       getPlayers,
@@ -777,8 +777,10 @@
     let isHumansTurn = false;
 
     pubSub.on("gameOver", () => {
-      _endGameScreen();
-      _removeGameListeners();
+      _endGameScreen().then(() => {
+        _removeGameListeners();
+        game.end();
+      });
     });
     pubSub.on("humansTurn", _setHumansTurn);
     pubSub.on("showMessage", _showStatusMessage);
@@ -1021,7 +1023,7 @@
       _highlightWinningRow(game.getWinningRow());
       _showStatusMessage("");
 
-      await game.delay(1000);
+      await game.delay(500);
 
       const gameOverDisp = document.querySelector(
         "#game-screen .board .game-over"
