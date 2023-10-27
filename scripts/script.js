@@ -560,7 +560,7 @@ function createBotPlayer(name, symbol, board, activeState) {
       end = performance.now();
       msg = "No Pruning";
     }
-    console.log(`${msg} execution time: ${end - start}`);
+    // console.log(`${msg} execution time: ${end - start}`);
     return result;
   }
 
@@ -569,6 +569,7 @@ function createBotPlayer(name, symbol, board, activeState) {
 
 /**
  * @typedef playerObj
+ * @property {String} name
  * @property {string} type
  * @property {string} symbol
  */
@@ -592,10 +593,10 @@ function gameController(playerObj1, playerObj2) {
   let turn = 0;
 
   if (playerObj1.type === "Bot") {
-    player1 = createBotPlayer("Player 1", playerObj1.symbol, board, true);
+    player1 = createBotPlayer(playerObj1.name, playerObj1.symbol, board, true);
   } else {
     player1 = createPlayer(
-      "Player 1",
+      playerObj1.name,
       playerObj1.type,
       playerObj1.symbol,
       true
@@ -603,10 +604,10 @@ function gameController(playerObj1, playerObj2) {
   }
 
   if (playerObj2.type === "Bot") {
-    player2 = createBotPlayer("Player 2", playerObj2.symbol, board, false);
+    player2 = createBotPlayer(playerObj2.name, playerObj2.symbol, board, false);
   } else {
     player2 = createPlayer(
-      "Player 2",
+      playerObj2.name,
       playerObj2.type,
       playerObj2.symbol,
       false
@@ -614,7 +615,7 @@ function gameController(playerObj1, playerObj2) {
   }
 
   function _getPrompt() {
-    return `${getCurrPlayer().getSymbol()}'s turn`;
+    return `${getCurrPlayer().getName()}'S TURN`;
   }
 
   function _switchCurrPlayer() {
@@ -646,14 +647,6 @@ function gameController(playerObj1, playerObj2) {
     }
   }
 
-  function _delay(ms) {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve("resolved");
-      }, ms);
-    });
-  }
-
   async function _playing() {
     if (!gameOver.state) {
       const currPlayer = getCurrPlayer();
@@ -663,7 +656,7 @@ function gameController(playerObj1, playerObj2) {
       } else {
         pubSub.emit("humansTurn", false);
         const [x, y] = currPlayer.getMove(turn);
-        await _delay(500);
+        await delay(500);
         playTurn(x, y);
       }
     } else {
@@ -679,12 +672,24 @@ function gameController(playerObj1, playerObj2) {
     player2 = {};
   }
 
+  function delay(ms) {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve("resolved");
+      }, ms);
+    });
+  }
+
   function getCurrPlayer() {
     if (player1.getActiveState()) {
       return player1;
     } else {
       return player2;
     }
+  }
+
+  function getPlayers() {
+    return { player1, player2 };
   }
 
   function getWinner() {
@@ -700,6 +705,7 @@ function gameController(playerObj1, playerObj2) {
     gameOver.state = false;
     gameOver.winner = "none";
     gameOver.winningRow = [];
+    pubSub.emit("showMessage", _getPrompt());
     _playing();
   }
 
@@ -725,21 +731,21 @@ function gameController(playerObj1, playerObj2) {
     start: startGame,
     playTurn,
     getCurrPlayer,
+    getPlayers,
     getWinner,
     getWinningRow,
+    delay,
   };
 }
 
 function displayController() {
   const players = [
     {
+      name: "PLAYER 1",
       type: "Human",
       symbol: "o",
     },
-    {
-      type: "Bot",
-      symbol: "x",
-    },
+    { name: "PLAYER 2", type: "Bot", symbol: "x" },
   ];
 
   const images = {
@@ -778,9 +784,24 @@ function displayController() {
     isHumansTurn = bool;
   }
 
+  function _highlightCurrPlayer() {
+    const player = game.getCurrPlayer();
+    const symbol = player.getSymbol();
+    const otherSymbol = symbol === "o" ? "x" : "o";
+    const pill = document.querySelector(`.pill[data-symbol="${symbol}"]`);
+    const otherPill = document.querySelector(
+      `.pill[data-symbol="${otherSymbol}"]`
+    );
+
+    pill.classList.remove("faded");
+    otherPill.classList.add("faded");
+  }
+
   function _showStatusMessage(msg) {
     const message = document.querySelector(".status .message");
     message.textContent = msg;
+
+    _highlightCurrPlayer();
   }
 
   function _markCell([x, y, symbol]) {
@@ -840,7 +861,7 @@ function displayController() {
   }
 
   function _changeColor(idx, symbol) {
-    const btns = document.querySelectorAll(`[data-player-idx="${idx}"]`);
+    const btns = document.querySelectorAll(`button[data-player-idx="${idx}"]`);
     btns.forEach((btn) => {
       if (symbol === "o") {
         btn.classList.add("o-color");
@@ -891,6 +912,11 @@ function displayController() {
     game.start();
   }
 
+  function _handleReplayClick() {
+    _clearGameScreen();
+    initStartScreen();
+  }
+
   function _removeStartListeners() {
     playerTypeBtns.forEach((btn) => {
       btn.removeEventListener("click", _handleSymbolClick);
@@ -906,6 +932,11 @@ function displayController() {
     cells.forEach((cell) => {
       cell.removeEventListener("click", _handleCellClick);
     });
+  }
+
+  function _removeReplayListener() {
+    const btn = document.querySelector("#game-screen button#replay");
+    btn.removeEventListener("click", _handleReplayClick());
   }
 
   function _initTypeSelection() {
@@ -924,17 +955,20 @@ function displayController() {
     const playersDisp = document.querySelector("#game-screen .players");
     for (let i = 0; i < 2; i++) {
       const pill = document.createElement("div");
-      const playerType = document.createElement("div");
-      const playerSymbol = document.createElement("div");
+      const playerName = document.createElement("div");
+      const playerSymbol = document.createElement("img");
+      const symbol = players[i].symbol;
 
-      pill.classList.add("pill");
-      playerType.classList.add("left", "player-type");
-      playerSymbol.classList.add("right", "player-symbol");
+      pill.classList.add("pill", `${symbol}-color`);
+      pill.dataset.symbol = symbol;
+      playerName.classList.add("top", "player-name");
+      playerSymbol.classList.add("bottom", "player-symbol");
 
-      playerType.textContent = players[i].type;
-      playerSymbol.textContent = players[i].symbol;
+      playerName.textContent = players[i].name;
 
-      pill.append(playerType, playerSymbol);
+      playerSymbol.src = images[symbol];
+
+      pill.append(playerSymbol, playerName);
       playersDisp.appendChild(pill);
     }
   }
@@ -965,23 +999,68 @@ function displayController() {
   function _initGameScreen() {
     _buildPlayers();
     _buildBoard();
+
+    const replay = document.querySelector("#game-screen button#replay");
+    replay.addEventListener("click", _handleReplayClick);
   }
 
-  function _endGameScreen() {
+  async function _endGameScreen() {
     const winner = game.getWinner();
     _highlightWinningRow(game.getWinningRow());
+    _showStatusMessage("");
+
+    await game.delay(1000);
+
+    const gameOverDisp = document.querySelector(
+      "#game-screen .board .game-over"
+    );
+    const avatar = gameOverDisp.querySelector(".avatar");
+    const msg = gameOverDisp.querySelector(".message");
+    const img1 = document.createElement("img");
+    let img2;
+
     if (winner === "none") {
-      _showStatusMessage("IT'S A DRAW");
+      img2 = document.createElement("img");
+      const { player1, player2 } = game.getPlayers();
+
+      img1.src = images[player1.getType()];
+      img1.classList.add(`${player1.getSymbol()}-color`);
+      img2.src = images[player2.getType()];
+      img2.classList.add(`${player2.getSymbol()}-color`);
+
+      msg.textContent = "IT'S A DRAW";
     } else {
-      _showStatusMessage(`${winner.getName()} WINS`);
+      img1.src = images[winner.getType()];
+      img1.classList.add(`${winner.getSymbol()}-color`);
+
+      msg.textContent = `${winner.getName()} WINS!`;
     }
+
+    avatar.appendChild(img1);
+    if (img2) avatar.appendChild(img2);
+    gameOverDisp.append(avatar, msg);
+    gameOverDisp.style.display = "grid";
   }
 
   function _clearGameScreen() {
-    // remove all child nodes in game screen
+    const gameScreen = document.querySelector("#game-screen");
+    const players = gameScreen.querySelector(".players");
+    const cells = gameScreen.querySelectorAll(".board .cell");
+    const messages = gameScreen.querySelectorAll(".message");
+    const gameOver = gameScreen.querySelector(".board .game-over");
+    const avatar = gameOver.querySelector(".avatar");
+
+    players.replaceChildren();
+    cells.forEach((cell) => cell.remove());
+    messages.forEach((msg) => (msg.textContent = ""));
+    avatar.replaceChildren();
+    gameOver.style.display = "none";
   }
 
   function initStartScreen() {
+    const screen = document.getElementById("start-screen");
+    screen.style.display = "block";
+    screen.classList.remove("fade-out");
     _initTypeSelection();
     _initSymbolSelection();
     startBtn.addEventListener("click", _handleStartClick);
@@ -989,13 +1068,13 @@ function displayController() {
 
   function _clearStartScreen() {
     const screen = document.getElementById("start-screen");
-    screen.classList.add("slide-out");
+    screen.classList.add("fade-out");
     setTimeout(() => {
       const playerTypesAvatar = document.querySelectorAll(
         "#start-screen button.player-type.avatar"
       );
       const playerTypesText = document.querySelectorAll(
-        "#start-screen button.player-type.text"
+        "#start-screen p.player-type.text"
       );
       const playerSymbols = document.querySelectorAll(
         "#start-screen button.player-symbol"
@@ -1004,15 +1083,16 @@ function displayController() {
       for (let i = 0; i < playerTypesText.length; i++) {
         const newType = i === 0 ? "Human" : "Bot";
         _changePlayerType(playerTypesText[i], playerTypesAvatar[i], i, newType);
+        console.log("change player type");
       }
 
       for (let j = 0; j < playerSymbols.length; j++) {
         const newSymbol = j === 0 ? "o" : "x";
         _changePlayerSymbol(playerSymbols[j], j, newSymbol);
+        console.log("change player symbol");
       }
-
       screen.style.display = "none";
-    }, 1000);
+    }, 500);
     _removeStartListeners();
   }
 

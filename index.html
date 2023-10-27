@@ -21,28 +21,30 @@
     <main>
         <div id="start-screen">
             <div class="container grid-con">
-                <div class="card left">
-                    <h3 class="player-label italic">PLAYER 1</h3>
-                    <div class="player-info">
-                        <button type="button" class="player-type avatar o-color" data-player-idx="0" value="Human">
-                            <img src="./images/human-avatar.svg" alt="Avatar">
-                        </button>
-                        <button type="button" class="player-symbol o-color" data-player-idx="0" value="o">
-                            <img src="./images/o.svg" alt="Nought">
-                        </button>
-                        <p class="player-type text extra-bold" data-player-idx="0">HUMAN</p>
+                <div class="cards flex-con">
+                    <div class="card left">
+                        <h3 class="player-label italic">PLAYER 1</h3>
+                        <div class="player-info">
+                            <button type="button" class="player-type avatar o-color" data-player-idx="0" value="Human">
+                                <img src="./images/human-avatar.svg" alt="Avatar">
+                            </button>
+                            <button type="button" class="player-symbol o-color" data-player-idx="0" value="o">
+                                <img src="./images/o.svg" alt="Nought">
+                            </button>
+                            <p class="player-type text extra-bold" data-player-idx="0">HUMAN</p>
+                        </div>
                     </div>
-                </div>
-                <div class="card right">
-                    <h3 class="player-label italic">PLAYER 2</h3>
-                    <div class="player-info">
-                        <button type="button" class="player-type avatar" data-player-idx="1" value="Bot">
-                            <img src="./images/bot-avatar.svg" alt="Avatar">
-                        </button>
-                        <button type="button" class="player-symbol" data-player-idx="1" value="x">
-                            <img src="./images/x.svg" alt="Cross">
-                        </button>
-                        <p class="player-type text extra-bold" data-player-idx="1">BOT</p>
+                    <div class="card right">
+                        <h3 class="player-label italic">PLAYER 2</h3>
+                        <div class="player-info">
+                            <button type="button" class="player-type avatar" data-player-idx="1" value="Bot">
+                                <img src="./images/bot-avatar.svg" alt="Avatar">
+                            </button>
+                            <button type="button" class="player-symbol" data-player-idx="1" value="x">
+                                <img src="./images/x.svg" alt="Cross">
+                            </button>
+                            <p class="player-type text extra-bold" data-player-idx="1">BOT</p>
+                        </div>
                     </div>
                 </div>
                 <div class="wrapper">
@@ -57,10 +59,24 @@
                 <section class="players">
                 </section>
                 <section class="board grid-con">
+                    <div class="game-over">
+                        <div class="avatar">
+                        </div>
+                        <h1 class="message extra-bold"></h1>
+                    </div>
                 </section>
+
                 <section class="status">
-                    <p class="message"></p>
+                    <p class="message extra-bold"></p>
                 </section>
+                <button type="button" id="replay" class="extra-bold italic">
+                    REPLAY
+                    <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 20">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                            d="M16 1v5h-5M2 19v-5h5m10-4a8 8 0 0 1-14.947 3.97M1 10a8 8 0 0 1 14.947-3.97" />
+                    </svg>
+                </button>
             </div>
         </div>
     </main>

@@ -2,19 +2,24 @@
     --container-padding-y: 2rem;
     --start-card-width: 16rem;
     --start-card-gap: 3rem;
-    --cell-width: 8rem;
-    --cell-gap: 0.5rem;
-    --content-width: clamp(320px, calc(2 * var(--start-card-width) + var(--start-card-gap) + 2 * var(--container-padding-y)), 1200px);
+    --cell-width: 7rem;
+    --cell-gap: 0.4rem;
+    --grid-width: calc(var(--cell-width) * 3 + var(--cell-gap) * 2);
+    --start-screen-width: calc(2 * var(--start-card-width) + var(--start-card-gap) + 2 * var(--container-padding-y));
+    --content-width: clamp(320px, 70vw, var(--start-screen-width));
+
     --header-height: max(10vh, calc(10vh + 4rem));
     --main-height: 70vh;
     --fallback-fonts: Arial, Helvetica, sans-serif;
     --o-color: #FFD04D;
     --x-color: #AEF45D;
+    --faded-color: hsl(0, 0%, 90%);
 }
 
 html {
     box-sizing: border-box;
     font-family: 'urbanistregular', var(--fallback-fonts);
+    font-size: clamp(10px, 3vw, 16px);
 }
 
 *,
@@ -39,6 +44,14 @@ html {
     font-style: italic;
 }
 
+.o-color {
+    color: var(--o-color);
+}
+
+.x-color {
+    color: var(--x-color);
+}
+
 button {
     display: block;
     padding: 0.5rem 1rem;
@@ -49,15 +62,12 @@ button {
 
 
 button:hover,
-button:focus {
-    background-color: hsl(0, 0%, 90%);
+button:active {
+    background-color: var(--faded-color);
 }
 
-/* button:active {
-    background-color: hsl(33, 100%, 60%);
-} */
-
-img {
+img,
+svg {
     pointer-events: none;
 }
 
@@ -100,7 +110,6 @@ header h1 {
 main {
     position: relative;
     height: var(--main-height);
-    overflow: hidden;
 }
 
 #start-screen {
@@ -109,18 +118,27 @@ main {
     position: absolute;
     top: 0;
     left: 0;
-    transition: transform 1s;
+    z-index: 10;
+    opacity: 1;
+    transition: all 0.3s;
 }
 
-#start-screen.slide-out {
-    transform: translate(100%);
+#start-screen.fade-out {
+    opacity: 0;
 }
 
 #start-screen .grid-con {
-    grid-template-columns: repeat(2, 1fr);
     grid-template-rows: 3fr 1fr;
-    column-gap: var(--start-card-gap);
     row-gap: 5rem;
+    justify-content: stretch;
+    align-items: center;
+}
+
+#start-screen .cards.flex-con {
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--start-card-gap);
+    width: 100%;
 }
 
 #start-screen .card .player-label {
@@ -189,7 +207,8 @@ main {
 
 #start-screen .card .player-info .player-type.avatar:hover img,
 #start-screen .card .player-info .player-symbol:hover img,
-#start-screen button#start:hover {
+#start-screen button#start:hover,
+#game-screen button#replay:hover {
     scale: 0.9;
 }
 
@@ -201,17 +220,83 @@ main {
     grid-column: 1 / -1;
 }
 
-#start-screen button#start {
+#start-screen button#start,
+#game-screen button#replay {
     font-size: 2rem;
     border-radius: 3rem;
     padding: 1rem 2rem;
     transition: scale 0.3s ease;
 }
 
+/* GAME SCREEN */
+#game-screen {
+    height: 100%;
+}
+
+#game-screen button#replay {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+}
+
+#game-screen button#replay svg {
+    width: 1.6rem;
+    height: 1.6rem;
+    stroke-width: 3;
+    stroke-linecap: butt;
+}
+
+#game-screen .grid-con {
+    gap: 1rem;
+}
+
+#game-screen .players {
+    width: 100%;
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#game-screen .players .pill {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 0.2rem solid transparent;
+    transition: all 0.3s;
+}
+
+#game-screen .players .pill.o-color:not(.faded) {
+    border-bottom-color: var(--o-color);
+}
+
+#game-screen .players .pill.x-color:not(.faded) {
+    border-bottom-color: var(--x-color);
+}
+
+#game-screen .players .pill .player-name {
+    font-family: 'urbanistextrabold_italic', var(--fallback-fonts);
+    font-size: 1.5rem;
+}
+
+#game-screen .players .pill .player-symbol {
+    width: auto;
+    height: 2rem;
+}
+
+
+#game-screen .players .pill.faded .player-name,
+#game-screen .players .pill.faded .player-symbol {
+    filter: saturate(40%);
+}
+
+
 #game-screen .board {
     grid-template-columns: repeat(3, max-content);
     grid-template-rows: repeat(3, max-content);
     gap: var(--cell-gap);
+    position: relative;
 }
 
 #game-screen .board .cell {
@@ -221,6 +306,7 @@ main {
     width: var(--cell-width);
     height: var(--cell-width);
     border-radius: 5%;
+    transition: background-color 0.3s;
 }
 
 #game-screen .board .cell.highlight[data-symbol='o'] {
@@ -234,4 +320,82 @@ main {
 #game-screen .board .cell img {
     width: 80%;
     height: auto;
+}
+
+#game-screen .status {
+    width: 100%;
+}
+
+#game-screen .status .message {
+    font-size: 1.7rem;
+}
+
+#game-screen .game-over {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #00000077;
+    backdrop-filter: blur(0.5rem);
+    align-content: center;
+    justify-content: center;
+    transition: all 1s;
+}
+
+#game-screen .game-over .avatar {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    align-items: center;
+}
+
+#game-screen .game-over .avatar img {
+    border-radius: 50%;
+    width: calc(var(--grid-width) / 2 - 2rem);
+    height: calc(var(--grid-width) / 2 - 2rem);
+    padding: 1.5rem;
+    scale: 0;
+}
+
+#game-screen .game-over .avatar img:first-child {
+    animation: 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0s 1 forwards pop-avatar;
+}
+
+#game-screen .game-over .avatar img:last-child:not(:only-child) {
+    animation: 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.1s 1 forwards pop-avatar;
+}
+
+#game-screen .game-over .avatar img.o-color {
+    background-color: var(--o-color);
+}
+
+#game-screen .game-over .avatar img.x-color {
+    background-color: var(--x-color);
+}
+
+#game-screen .game-over .message {
+    font-size: 2rem;
+    animation: 0.3s ease 0s 1 forwards slide-message;
+}
+
+@keyframes pop-avatar {
+    from {
+        scale: 0;
+    }
+
+    to {
+        scale: 1;
+    }
+}
+
+@keyframes slide-message {
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
 }
